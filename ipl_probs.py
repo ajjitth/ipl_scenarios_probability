@@ -131,22 +131,18 @@ def run_ipl_simulation(basePoints_master, matches_master, winner=None, top_n=4, 
 basePoints = {
     "pbks": 13,
     "rcb":  12,
-    "srh":  12,
+    "srh":  14,
     "rr":   12,
     "gt":   12,
-    "csk":   8,
+    "csk":  10,
     "dc":    8,
     "kkr":   7,
-    "mi":    4,
-    "lsg":   4,
+    "mi":    6,
+    "lsg":   6,
 }
 
-# Remaining matches: 47–70 (matches 1–46 already completed)
+# Remaining matches: 51–70 (matches 1–50 already completed)
 matches = [
-    "mi:lsg",    # 47 - May 04
-    "dc:csk",    # 48 - May 05
-    "srh:pbks",  # 49 - May 06
-    "lsg:rcb",   # 50 - May 07
     "dc:kkr",    # 51 - May 08
     "rr:gt",     # 52 - May 09
     "csk:lsg",   # 53 - May 10
@@ -177,5 +173,7 @@ results = run_ipl_simulation(
 
 # %%
 print(results.keys())
-pd.set_option("display.float_format", "{:.3f}".format)
+pd.set_option("display.float_format", "{:.4f}".format)
 pd.DataFrame(results["summary"])
+
+
