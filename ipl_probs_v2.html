@@ -7530,24 +7530,18 @@ a.anchor-link {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [16]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [29]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="sd">"""</span>
-<span class="sd">Modified IPL simulation. Adds a third metric per team — 'good_nrr_pct' —</span>
-<span class="sd">which uses the fractional-credit definition that matches the Reddit</span>
-<span class="sd">'+ Good NRR' column. The original 'confirmed' and 'possible' metrics are</span>
-<span class="sd">preserved so you can see all three side by side.</span>
-<span class="sd">"""</span>
-<span class="k">def</span> <span class="nf">chop_microseconds</span><span class="p">(</span><span class="n">delta</span><span class="p">):</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">chop_microseconds</span><span class="p">(</span><span class="n">delta</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">delta</span> <span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">microseconds</span><span class="o">=</span><span class="n">delta</span><span class="o">.</span><span class="n">microseconds</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">run_ipl_simulation</span><span class="p">(</span><span class="n">basePoints_master</span><span class="p">,</span> <span class="n">matches_master</span><span class="p">,</span> <span class="n">winner</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="k">def</span> <span class="nf">run_ipl_simulation</span><span class="p">(</span><span class="n">basePoints_master</span><span class="p">,</span> <span class="n">matches_master</span><span class="p">,</span>
                        <span class="n">top_n</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">print_every</span><span class="o">=</span><span class="mi">500000</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    For each team and each finishing slot threshold (top_n and top-2),</span>
-<span class="sd">    compute three metrics:</span>
+<span class="sd">    compute the metrics:</span>
 
 <span class="sd">      confirmed_pct : guaranteed to finish in the top, regardless of any</span>
 <span class="sd">                      tiebreaker. Mathematically: (teams strictly ahead) +</span>
@@ -7560,31 +7554,14 @@ a.anchor-link {
 <span class="sd">                      (1 + tied) teams (including me) compete for them.</span>
 <span class="sd">                      I get my fair share, capped at 1 since I can only</span>
 <span class="sd">                      occupy one slot myself. Averaging this over all</span>
-<span class="sd">                      scenarios produces the column the Reddit author</span>
-<span class="sd">                      labels '+ Good NRR'.</span>
-
-<span class="sd">      possible_pct  : the original definition — counts the scenario fully</span>
-<span class="sd">                      if it's logically possible for me to qualify</span>
-<span class="sd">                      (i.e. fewer than top_n teams strictly ahead). This</span>
-<span class="sd">                      double-counts when several teams are tied at the</span>
-<span class="sd">                      cutoff and is usually too optimistic.</span>
+<span class="sd">                      scenarios produces the '+ Good NRR' probability.</span>
 <span class="sd">    """</span>
 
     <span class="n">basePoints</span> <span class="o">=</span> <span class="n">basePoints_master</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">matches</span>    <span class="o">=</span> <span class="n">matches_master</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-    <span class="c1"># Optional 'winner' branch — unchanged from the original code.</span>
-    <span class="k">if</span> <span class="n">winner</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">nextMatch</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">simulation_condition</span> <span class="o">=</span> <span class="s2">"</span><span class="si">{}</span><span class="s2"> wins </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">winner</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="n">nextMatch</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">winner</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">nextMatch</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"</span><span class="si">{}</span><span class="s2"> is not playing in next game '</span><span class="si">{}</span><span class="s2">'"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">winner</span><span class="p">,</span> <span class="n">nextMatch</span><span class="p">))</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">"Assuming </span><span class="si">{}</span><span class="s2"> wins → points +2, removing </span><span class="si">{}</span><span class="s2"> from schedule</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">winner</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="n">nextMatch</span><span class="p">))</span>
-        <span class="n">basePoints</span><span class="p">[</span><span class="n">winner</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">2</span>
-        <span class="n">matches</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="n">simulation_condition</span> <span class="o">=</span> <span class="s2">"before </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">"Simulating from current standings (next game: </span><span class="si">{}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+    <span class="n">simulation_condition</span> <span class="o">=</span> <span class="s2">"before </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Simulating from current standings (next game: </span><span class="si">{}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
 
     <span class="n">teams</span>     <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">basePoints</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
     <span class="n">n</span>         <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span>
@@ -7594,14 +7571,12 @@ a.anchor-link {
     <span class="nb">print</span><span class="p">(</span><span class="s2">"Pending matches    : </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"Possible scenarios : </span><span class="si">{:,}</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">combos</span><span class="p">))</span>
 
-    <span class="c1"># Three counters per team for top_n, three more for top-2.</span>
+    <span class="c1"># Two counters per team for top_n, two more for top-2.</span>
     <span class="c1"># 'good_nrr' is float because each scenario can contribute a fraction.</span>
     <span class="n">confirmed</span>  <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mi">0</span>   <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
     <span class="n">good_nrr</span>   <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
-    <span class="n">possible</span>   <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mi">0</span>   <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
     <span class="n">confirmed2</span> <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mi">0</span>   <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
     <span class="n">good_nrr2</span>  <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
-    <span class="n">possible2</span>  <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mi">0</span>   <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
 
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
@@ -7633,29 +7608,20 @@ a.anchor-link {
             <span class="k">if</span> <span class="n">ahead</span> <span class="o">+</span> <span class="n">tied</span> <span class="o">&lt;=</span> <span class="n">top_n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">confirmed</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
 
-            <span class="c1"># GOOD-NRR (fractional): give me my fair share of remaining</span>
-            <span class="c1"># slots at my points level. Cap at 1 because a team can only</span>
-            <span class="c1"># occupy one qualifying slot. The cap matters: if I'm alone</span>
-            <span class="c1"># at the top (ahead = 0, tied = 0), slots / competitors = 4,</span>
-            <span class="c1"># but my actual contribution should be 1.</span>
+            <span class="c1"># GOOD-NRR: give me my fair share of remaining slots at my points </span>
+            <span class="c1"># level. Cap at 1 because a team can only occupy one qualifying slot.</span>
+            <span class="c1"># The cap matters: if I'm alone at the top (ahead = 0, tied = 0), </span>
+            <span class="c1"># slots / competitors = 4, but my actual contribution should be 1.</span>
             <span class="k">if</span> <span class="n">ahead</span> <span class="o">&lt;</span> <span class="n">top_n</span><span class="p">:</span>
                 <span class="n">slots</span>       <span class="o">=</span> <span class="n">top_n</span> <span class="o">-</span> <span class="n">ahead</span>
                 <span class="n">competitors</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">tied</span>
                 <span class="n">good_nrr</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">slots</span> <span class="o">/</span> <span class="n">competitors</span><span class="p">)</span>
 
-            <span class="c1"># POSSIBLE (lenient): the original definition. Counts the</span>
-            <span class="c1"># scenario if it's at least logically possible for me to</span>
-            <span class="c1"># qualify, no matter how many teams are tied at the cutoff.</span>
-            <span class="k">if</span> <span class="n">ahead</span> <span class="o">&lt;=</span> <span class="n">top_n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">possible</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
-
-            <span class="c1"># ── TOP-2 metrics: same three definitions, top_n replaced by 2 ──</span>
+            <span class="c1"># ── TOP-2 metrics: same definitions, top_n replaced by 2 ──</span>
             <span class="k">if</span> <span class="n">ahead</span> <span class="o">+</span> <span class="n">tied</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">confirmed2</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
             <span class="k">if</span> <span class="n">ahead</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="n">good_nrr2</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span> <span class="o">-</span> <span class="n">ahead</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tied</span><span class="p">))</span>
-            <span class="k">if</span> <span class="n">ahead</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">possible2</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
 
     <span class="n">elapsed_total</span> <span class="o">=</span> <span class="n">chop_microseconds</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">))</span>
 
@@ -7665,25 +7631,23 @@ a.anchor-link {
             <span class="s2">"team"</span>               <span class="p">:</span> <span class="n">team</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
             <span class="s2">"top2_confirmed_pct"</span> <span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">confirmed2</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">combos</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
             <span class="s2">"top2_good_nrr_pct"</span>  <span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">good_nrr2</span><span class="p">[</span><span class="n">team</span><span class="p">]</span>  <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">combos</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
-            <span class="s2">"top2_possible_pct"</span>  <span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">possible2</span><span class="p">[</span><span class="n">team</span><span class="p">]</span>  <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">combos</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
             <span class="s2">"top4_confirmed_pct"</span> <span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">confirmed</span><span class="p">[</span><span class="n">team</span><span class="p">]</span>  <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">combos</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
             <span class="s2">"top4_good_nrr_pct"</span>  <span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">good_nrr</span><span class="p">[</span><span class="n">team</span><span class="p">]</span>   <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">combos</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
-            <span class="s2">"top4_possible_pct"</span>  <span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">possible</span><span class="p">[</span><span class="n">team</span><span class="p">]</span>   <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">combos</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
         <span class="p">})</span>
 
-    <span class="n">summary</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="s2">"top4_good_nrr_pct"</span><span class="p">])</span>
+    <span class="n">summary</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="s2">"top2_confirmed_pct"</span><span class="p">])</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s1">'='</span> <span class="o">*</span> <span class="mi">86</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"  RESULTS: </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">simulation_condition</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'='</span> <span class="o">*</span> <span class="mi">86</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="si">{:&gt;5}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-        <span class="s2">"Team"</span><span class="p">,</span> <span class="s2">"T2 Conf"</span><span class="p">,</span> <span class="s2">"T2 NRR"</span><span class="p">,</span> <span class="s2">"T2 Poss"</span><span class="p">,</span> <span class="s2">"T4 Conf"</span><span class="p">,</span> <span class="s2">"T4 NRR"</span><span class="p">,</span> <span class="s2">"T4 Poss"</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="si">{:&gt;5}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="s2">"Team"</span><span class="p">,</span> <span class="s2">"T2 Conf"</span><span class="p">,</span> <span class="s2">"T2 NRR"</span><span class="p">,</span> <span class="s2">"T4 Conf"</span><span class="p">,</span> <span class="s2">"T4 NRR"</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="mi">86</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="si">{:&gt;5}</span><span class="s2"> | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">%"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="si">{:&gt;5}</span><span class="s2"> | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">%"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="n">row</span><span class="p">[</span><span class="s2">"team"</span><span class="p">],</span>
-            <span class="n">row</span><span class="p">[</span><span class="s2">"top2_confirmed_pct"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"top2_good_nrr_pct"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"top2_possible_pct"</span><span class="p">],</span>
-            <span class="n">row</span><span class="p">[</span><span class="s2">"top4_confirmed_pct"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"top4_good_nrr_pct"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"top4_possible_pct"</span><span class="p">],</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">"top2_confirmed_pct"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"top2_good_nrr_pct"</span><span class="p">],</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">"top4_confirmed_pct"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"top4_good_nrr_pct"</span><span class="p">]</span>
         <span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s1">'='</span> <span class="o">*</span> <span class="mi">86</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"Completed </span><span class="si">{:,}</span><span class="s2"> scenarios in </span><span class="si">{}</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">combos</span><span class="p">,</span> <span class="n">elapsed_total</span><span class="p">))</span>
@@ -7704,7 +7668,7 @@ a.anchor-link {
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [17]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [30]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="n">basePoints</span> <span class="o">=</span> <span class="p">{</span>
@@ -7743,7 +7707,7 @@ a.anchor-link {
     <span class="s2">"kkr:dc"</span>
 <span class="p">]</span>
 
-<span class="n">results</span> <span class="o">=</span> <span class="n">run_ipl_simulation</span><span class="p">(</span><span class="n">basePoints</span><span class="p">,</span> <span class="n">matches</span><span class="p">,</span> <span class="n">winner</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">run_ipl_simulation</span><span class="p">(</span><span class="n">basePoints</span><span class="p">,</span> <span class="n">matches</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7761,43 +7725,42 @@ a.anchor-link {
 Pending matches    : 20
 Possible scenarios : 1,048,576
 
-  500,000 / 1,048,576 (47.7%) | elapsed 0:00:14 | eta 0:00:15
+  500,000 / 1,048,576 (47.7%) | elapsed 0:00:15 | eta 0:00:16
   1,000,000 / 1,048,576 (95.4%) | elapsed 0:00:28 | eta 0:00:01
 ======================================================================================
   RESULTS: before dc:kkr
 ======================================================================================
- Team |  T2 Conf |   T2 NRR |  T2 Poss |  T4 Conf |   T4 NRR |  T4 Poss
+ Team |  T2 Conf |   T2 NRR |  T4 Conf |   T4 NRR
 --------------------------------------------------------------------------------------
-  SRH |   38.20% |   48.39% |   61.00% |   71.08% |   81.47% |   89.36%
- PBKS |   49.59% |   49.93% |   50.28% |   79.40% |   80.32% |   81.24%
-   RR |   20.60% |   29.57% |   40.85% |   52.67% |   64.87% |   75.95%
-  RCB |   22.39% |   31.07% |   41.82% |   52.45% |   64.58% |   75.52%
-   GT |   22.77% |   31.12% |   41.92% |   52.55% |   63.98% |   73.91%
-  CSK |    3.93% |    7.68% |   13.55% |   17.87% |   28.20% |   38.55%
-  KKR |    1.09% |    1.44% |    1.79% |    7.54% |    8.46% |    9.39%
-   DC |    0.05% |    0.80% |    2.22% |    3.02% |    6.75% |   11.78%
-  LSG |    0.00% |    0.00% |    0.01% |    0.02% |    0.68% |    2.00%
-   MI |    0.00% |    0.00% |    0.01% |    0.01% |    0.67% |    2.08%
+ PBKS |   49.59% |   49.93% |   79.40% |   80.32%
+  SRH |   38.20% |   48.39% |   71.08% |   81.47%
+   GT |   22.77% |   31.12% |   52.55% |   63.98%
+  RCB |   22.39% |   31.07% |   52.45% |   64.58%
+   RR |   20.60% |   29.57% |   52.67% |   64.87%
+  CSK |    3.93% |    7.68% |   17.87% |   28.20%
+  KKR |    1.09% |    1.44% |    7.54% |    8.46%
+   DC |    0.05% |    0.80% |    3.02% |    6.75%
+  LSG |    0.00% |    0.00% |    0.02% |    0.68%
+   MI |    0.00% |    0.00% |    0.01% |    0.67%
 ======================================================================================
-Completed 1,048,576 scenarios in 0:00:29
+Completed 1,048,576 scenarios in 0:00:30
 
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=bda8ffad">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5328e5db">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [23]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [31]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 <span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">"display.float_format"</span><span class="p">,</span> <span class="s2">"</span><span class="si">{:.4f}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>
 <span class="n">display_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">])[[</span><span class="s1">'team'</span><span class="p">,</span> <span class="s1">'top2_confirmed_pct'</span><span class="p">,</span> <span class="s1">'top2_good_nrr_pct'</span><span class="p">,</span> <span class="s1">'top4_confirmed_pct'</span><span class="p">,</span> <span class="s1">'top4_good_nrr_pct'</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<span class="n">display_df</span> <span class="o">=</span> <span class="n">display_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">by</span><span class="o">=</span><span class="s1">'top2_confirmed_pct'</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 <span class="n">display_df</span> <span class="o">=</span> <span class="n">display_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span>
     <span class="s1">'team'</span><span class="p">:</span> <span class="s1">'Team'</span><span class="p">,</span>
     <span class="s1">'top2_confirmed_pct'</span><span class="p">:</span> <span class="s1">'Top2 Pts Only'</span><span class="p">,</span>
@@ -7824,7 +7787,7 @@ Completed 1,048,576 scenarios in 0:00:29
 </div>
 </div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
-<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[23]:</div>
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[31]:</div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
 <div>
 <style scoped="">
