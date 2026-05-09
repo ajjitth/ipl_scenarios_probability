@@ -3,7 +3,7 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>ipl_probs_v2</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>ipl_probs</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7509,7 +7509,7 @@ a.anchor-link {
 </style>
 <!-- End of mermaid configuration --></head>
 <body class="jp-Notebook" data-jp-theme-light="true" data-jp-theme-name="JupyterLab Light">
-<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=e97fa6e5">
+<main><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=bc8928ce">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -7520,17 +7520,18 @@ a.anchor-link {
 <div class="highlight hl-ipython3"><pre><span></span><span class="kn">import</span> <span class="nn">datetime</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">random</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=57524fb7">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=cd74f8c5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [29]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
 <div class="highlight hl-ipython3"><pre><span></span><span class="k">def</span> <span class="nf">chop_microseconds</span><span class="p">(</span><span class="n">delta</span><span class="p">):</span>
@@ -7538,30 +7539,19 @@ a.anchor-link {
 
 
 <span class="k">def</span> <span class="nf">run_ipl_simulation</span><span class="p">(</span><span class="n">basePoints_master</span><span class="p">,</span> <span class="n">matches_master</span><span class="p">,</span>
-                       <span class="n">top_n</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">print_every</span><span class="o">=</span><span class="mi">500000</span><span class="p">):</span>
+                       <span class="n">top_n</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">print_every</span><span class="o">=</span><span class="mi">500000</span><span class="p">,</span>
+                       <span class="n">track_scenarios</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    For each team and each finishing slot threshold (top_n and top-2),</span>
-<span class="sd">    compute the metrics:</span>
+<span class="sd">    Same as v2, plus an optional tracking layer that records, for every</span>
+<span class="sd">    (team, metric) pair, the scenario indices that contributed.</span>
 
-<span class="sd">      confirmed_pct : guaranteed to finish in the top, regardless of any</span>
-<span class="sd">                      tiebreaker. Mathematically: (teams strictly ahead) +</span>
-<span class="sd">                      (teams tied with me on points) &lt;= top_n - 1, so even</span>
-<span class="sd">                      if every tied team beats me on NRR there are still</span>
-<span class="sd">                      slots left for me.</span>
-
-<span class="sd">      good_nrr_pct  : fractional credit. In each scenario, at my points</span>
-<span class="sd">                      level (4 - ahead) slots are still open, and</span>
-<span class="sd">                      (1 + tied) teams (including me) compete for them.</span>
-<span class="sd">                      I get my fair share, capped at 1 since I can only</span>
-<span class="sd">                      occupy one slot myself. Averaging this over all</span>
-<span class="sd">                      scenarios produces the '+ Good NRR' probability.</span>
+<span class="sd">    A scenario is fully described by its index i in [0, 2^n). Bit k of i</span>
+<span class="sd">    decides the winner of the k-th remaining match: bit = 0 means team1</span>
+<span class="sd">    of the match string wins, bit = 1 means team2 wins. So given an</span>
+<span class="sd">    index, we can rebuild the entire scenario without storing it.</span>
 <span class="sd">    """</span>
-
     <span class="n">basePoints</span> <span class="o">=</span> <span class="n">basePoints_master</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">matches</span>    <span class="o">=</span> <span class="n">matches_master</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-
-    <span class="n">simulation_condition</span> <span class="o">=</span> <span class="s2">"before </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Simulating from current standings (next game: </span><span class="si">{}</span><span class="s2">)</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
 
     <span class="n">teams</span>     <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">basePoints</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
     <span class="n">n</span>         <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span>
@@ -7571,57 +7561,59 @@ a.anchor-link {
     <span class="nb">print</span><span class="p">(</span><span class="s2">"Pending matches    : </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">"Possible scenarios : </span><span class="si">{:,}</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">combos</span><span class="p">))</span>
 
-    <span class="c1"># Two counters per team for top_n, two more for top-2.</span>
-    <span class="c1"># 'good_nrr' is float because each scenario can contribute a fraction.</span>
     <span class="n">confirmed</span>  <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mi">0</span>   <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
     <span class="n">good_nrr</span>   <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
     <span class="n">confirmed2</span> <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mi">0</span>   <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
     <span class="n">good_nrr2</span>  <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
 
+    <span class="c1"># Per-(team, metric) lists of scenario indices. Only populated if</span>
+    <span class="c1"># track_scenarios is True. For 'good_nrr' metrics we record every</span>
+    <span class="c1"># scenario where the team gets non-zero credit (ahead &lt; cutoff);</span>
+    <span class="c1"># the credit amount itself can always be recomputed from i.</span>
+    <span class="k">if</span> <span class="n">track_scenarios</span><span class="p">:</span>
+        <span class="n">sc_top_n_confirmed</span> <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
+        <span class="n">sc_top_n_good_nrr</span>  <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
+        <span class="n">sc_top_2_confirmed</span> <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
+        <span class="n">sc_top_2_good_nrr</span>  <span class="o">=</span> <span class="p">{</span><span class="n">t</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">}</span>
+
     <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
 
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">combos</span><span class="p">):</span>
-
         <span class="k">if</span> <span class="n">print_every</span> <span class="ow">and</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="n">print_every</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">elapsed</span> <span class="o">=</span> <span class="n">chop_microseconds</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">))</span>
-            <span class="n">eta</span>     <span class="o">=</span> <span class="n">chop_microseconds</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">combos</span> <span class="o">-</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
-            <span class="nb">print</span><span class="p">(</span><span class="s2">"  </span><span class="si">{:,}</span><span class="s2"> / </span><span class="si">{:,}</span><span class="s2"> (</span><span class="si">{:.1f}</span><span class="s2">%) | elapsed </span><span class="si">{}</span><span class="s2"> | eta </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">combos</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="o">/</span><span class="n">combos</span><span class="p">,</span> <span class="n">elapsed</span><span class="p">,</span> <span class="n">eta</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"  </span><span class="si">{:,}</span><span class="s2"> / </span><span class="si">{:,}</span><span class="s2"> (</span><span class="si">{:.1f}</span><span class="s2">%) | elapsed </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">combos</span><span class="p">,</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="mi">100</span><span class="o">/</span><span class="n">combos</span><span class="p">,</span> <span class="n">elapsed</span><span class="p">))</span>
 
-        <span class="c1"># Bit pattern of i decides who wins each remaining match.</span>
         <span class="n">binaryStr</span> <span class="o">=</span> <span class="nb">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">formatStr</span><span class="p">)</span>
         <span class="n">simPoints</span> <span class="o">=</span> <span class="n">basePoints</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">matchCnt</span><span class="p">,</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">binaryStr</span><span class="p">):</span>
             <span class="n">team1</span><span class="p">,</span> <span class="n">team2</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">matchCnt</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span>
             <span class="n">simPoints</span><span class="p">[</span><span class="n">team1</span> <span class="k">if</span> <span class="n">seq</span> <span class="o">==</span> <span class="s2">"0"</span> <span class="k">else</span> <span class="n">team2</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">2</span>
 
-        <span class="c1"># Score this scenario from each team's perspective.</span>
         <span class="k">for</span> <span class="n">team</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">:</span>
             <span class="n">my_pts</span> <span class="o">=</span> <span class="n">simPoints</span><span class="p">[</span><span class="n">team</span><span class="p">]</span>
             <span class="n">ahead</span>  <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span> <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">simPoints</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">my_pts</span><span class="p">)</span>
             <span class="n">tied</span>   <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span> <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">team</span> <span class="ow">and</span> <span class="n">simPoints</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="o">==</span> <span class="n">my_pts</span><span class="p">)</span>
 
-            <span class="c1"># ── TOP-N metrics ──</span>
-
-            <span class="c1"># CONFIRMED: even if every tied team beats me on NRR, I still</span>
-            <span class="c1"># land in the top_n. That requires ahead + tied &lt;= top_n - 1.</span>
             <span class="k">if</span> <span class="n">ahead</span> <span class="o">+</span> <span class="n">tied</span> <span class="o">&lt;=</span> <span class="n">top_n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">confirmed</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">track_scenarios</span><span class="p">:</span>
+                    <span class="n">sc_top_n_confirmed</span><span class="p">[</span><span class="n">team</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
-            <span class="c1"># GOOD-NRR: give me my fair share of remaining slots at my points </span>
-            <span class="c1"># level. Cap at 1 because a team can only occupy one qualifying slot.</span>
-            <span class="c1"># The cap matters: if I'm alone at the top (ahead = 0, tied = 0), </span>
-            <span class="c1"># slots / competitors = 4, but my actual contribution should be 1.</span>
             <span class="k">if</span> <span class="n">ahead</span> <span class="o">&lt;</span> <span class="n">top_n</span><span class="p">:</span>
-                <span class="n">slots</span>       <span class="o">=</span> <span class="n">top_n</span> <span class="o">-</span> <span class="n">ahead</span>
-                <span class="n">competitors</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">tied</span>
-                <span class="n">good_nrr</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">slots</span> <span class="o">/</span> <span class="n">competitors</span><span class="p">)</span>
+                <span class="n">good_nrr</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="p">(</span><span class="n">top_n</span> <span class="o">-</span> <span class="n">ahead</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tied</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">track_scenarios</span><span class="p">:</span>
+                    <span class="n">sc_top_n_good_nrr</span><span class="p">[</span><span class="n">team</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
-            <span class="c1"># ── TOP-2 metrics: same definitions, top_n replaced by 2 ──</span>
             <span class="k">if</span> <span class="n">ahead</span> <span class="o">+</span> <span class="n">tied</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">confirmed2</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">if</span> <span class="n">track_scenarios</span><span class="p">:</span>
+                    <span class="n">sc_top_2_confirmed</span><span class="p">[</span><span class="n">team</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
             <span class="k">if</span> <span class="n">ahead</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
                 <span class="n">good_nrr2</span><span class="p">[</span><span class="n">team</span><span class="p">]</span> <span class="o">+=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span> <span class="o">-</span> <span class="n">ahead</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tied</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">track_scenarios</span><span class="p">:</span>
+                    <span class="n">sc_top_2_good_nrr</span><span class="p">[</span><span class="n">team</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
 
     <span class="n">elapsed_total</span> <span class="o">=</span> <span class="n">chop_microseconds</span><span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span><span class="p">))</span>
 
@@ -7634,58 +7626,172 @@ a.anchor-link {
             <span class="s2">"top4_confirmed_pct"</span> <span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">confirmed</span><span class="p">[</span><span class="n">team</span><span class="p">]</span>  <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">combos</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
             <span class="s2">"top4_good_nrr_pct"</span>  <span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">good_nrr</span><span class="p">[</span><span class="n">team</span><span class="p">]</span>   <span class="o">*</span> <span class="mf">100.0</span> <span class="o">/</span> <span class="n">combos</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span>
         <span class="p">})</span>
+    <span class="n">summary</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="s2">"top4_good_nrr_pct"</span><span class="p">])</span>
 
-    <span class="n">summary</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="o">-</span><span class="n">x</span><span class="p">[</span><span class="s2">"top2_confirmed_pct"</span><span class="p">])</span>
-
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'='</span> <span class="o">*</span> <span class="mi">86</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"  RESULTS: </span><span class="si">{}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">simulation_condition</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'='</span> <span class="o">*</span> <span class="mi">86</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="si">{:&gt;5}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2"> | </span><span class="si">{:&gt;8}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-        <span class="s2">"Team"</span><span class="p">,</span> <span class="s2">"T2 Conf"</span><span class="p">,</span> <span class="s2">"T2 NRR"</span><span class="p">,</span> <span class="s2">"T4 Conf"</span><span class="p">,</span> <span class="s2">"T4 NRR"</span><span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"-"</span> <span class="o">*</span> <span class="mi">86</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">summary</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="si">{:&gt;5}</span><span class="s2"> | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">% | </span><span class="si">{:&gt;7.2f}</span><span class="s2">%"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-            <span class="n">row</span><span class="p">[</span><span class="s2">"team"</span><span class="p">],</span>
-            <span class="n">row</span><span class="p">[</span><span class="s2">"top2_confirmed_pct"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"top2_good_nrr_pct"</span><span class="p">],</span>
-            <span class="n">row</span><span class="p">[</span><span class="s2">"top4_confirmed_pct"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"top4_good_nrr_pct"</span><span class="p">]</span>
-        <span class="p">))</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">'='</span> <span class="o">*</span> <span class="mi">86</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">"Completed </span><span class="si">{:,}</span><span class="s2"> scenarios in </span><span class="si">{}</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">combos</span><span class="p">,</span> <span class="n">elapsed_total</span><span class="p">))</span>
-
-    <span class="k">return</span> <span class="p">{</span>
-        <span class="s2">"summary"</span>              <span class="p">:</span> <span class="n">summary</span><span class="p">,</span>
-        <span class="s2">"simulation_condition"</span> <span class="p">:</span> <span class="n">simulation_condition</span><span class="p">,</span>
-        <span class="s2">"total_scenarios"</span>      <span class="p">:</span> <span class="n">combos</span><span class="p">,</span>
-        <span class="s2">"elapsed"</span>              <span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">elapsed_total</span><span class="p">),</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">"summary"</span>         <span class="p">:</span> <span class="n">summary</span><span class="p">,</span>
+        <span class="s2">"total_scenarios"</span> <span class="p">:</span> <span class="n">combos</span><span class="p">,</span>
+        <span class="s2">"elapsed"</span>         <span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">elapsed_total</span><span class="p">),</span>
+        <span class="s2">"matches"</span>         <span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">matches_master</span><span class="p">),</span>
+        <span class="s2">"basePoints"</span>      <span class="p">:</span> <span class="nb">dict</span><span class="p">(</span><span class="n">basePoints_master</span><span class="p">),</span>
+        <span class="s2">"top_n"</span>           <span class="p">:</span> <span class="n">top_n</span><span class="p">,</span>
     <span class="p">}</span>
+    <span class="k">if</span> <span class="n">track_scenarios</span><span class="p">:</span>
+        <span class="c1"># Use upper-case team keys for consistency with the summary table.</span>
+        <span class="n">out</span><span class="p">[</span><span class="s2">"scenarios"</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">"top</span><span class="si">{}</span><span class="s2">_confirmed"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">top_n</span><span class="p">)</span> <span class="p">:</span> <span class="p">{</span><span class="n">t</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span> <span class="n">sc_top_n_confirmed</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">},</span>
+            <span class="s2">"top</span><span class="si">{}</span><span class="s2">_good_nrr"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">top_n</span><span class="p">)</span>  <span class="p">:</span> <span class="p">{</span><span class="n">t</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span> <span class="n">sc_top_n_good_nrr</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>  <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">},</span>
+            <span class="s2">"top2_confirmed"</span>                 <span class="p">:</span> <span class="p">{</span><span class="n">t</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span> <span class="n">sc_top_2_confirmed</span><span class="p">[</span><span class="n">t</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">},</span>
+            <span class="s2">"top2_good_nrr"</span>                  <span class="p">:</span> <span class="p">{</span><span class="n">t</span><span class="o">.</span><span class="n">upper</span><span class="p">():</span> <span class="n">sc_top_2_good_nrr</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>  <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">teams</span><span class="p">},</span>
+        <span class="p">}</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Completed </span><span class="si">{:,}</span><span class="s2"> scenarios in </span><span class="si">{}</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">combos</span><span class="p">,</span> <span class="n">elapsed_total</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">out</span>
+
+
+<span class="k">def</span> <span class="nf">decode_scenario</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">basePoints</span><span class="p">,</span> <span class="n">matches</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Given a scenario index i, return everything you might want to know</span>
+<span class="sd">    about that scenario:</span>
+<span class="sd">      - 'winners'  : a flat list of winner team names, one entry per</span>
+<span class="sd">                     remaining match, in the same order as `matches`.</span>
+<span class="sd">                     e.g. ["kkr", "gt",......  ......, "dc"].</span>
+<span class="sd">      - 'outcomes' : list of dicts {match, winner, loser}, in case you</span>
+<span class="sd">                     want both teams of each match handy.</span>
+<span class="sd">      - 'points'   : final simulated points table after applying every</span>
+<span class="sd">                     match outcome to the starting basePoints.</span>
+<span class="sd">      - 'standings': list of (team, points) sorted by points desc.</span>
+
+<span class="sd">    All four are derived from the same single bit-walk over `i`, so</span>
+<span class="sd">    decoding a scenario is O(n) where n is the number of pending matches.</span>
+<span class="sd">    """</span>
+    <span class="n">n</span>         <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">)</span>
+    <span class="n">binaryStr</span> <span class="o">=</span> <span class="nb">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="s2">"0</span><span class="si">{}</span><span class="s2">b"</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="p">))</span>
+    <span class="n">simPoints</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">basePoints</span><span class="p">)</span>
+    <span class="n">winners</span>   <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">outcomes</span>  <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">binaryStr</span><span class="p">):</span>
+        <span class="n">team1</span><span class="p">,</span> <span class="n">team2</span> <span class="o">=</span> <span class="n">matches</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span>
+        <span class="c1"># Bit convention: 0 means team1 wins, 1 means team2 wins. This</span>
+        <span class="c1"># has to match the convention used in run_ipl_simulation, which</span>
+        <span class="c1"># it does — same `if seq == "0"` branch.</span>
+        <span class="k">if</span> <span class="n">seq</span> <span class="o">==</span> <span class="s2">"0"</span><span class="p">:</span>
+            <span class="n">winner</span><span class="p">,</span> <span class="n">loser</span> <span class="o">=</span> <span class="n">team1</span><span class="p">,</span> <span class="n">team2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">winner</span><span class="p">,</span> <span class="n">loser</span> <span class="o">=</span> <span class="n">team2</span><span class="p">,</span> <span class="n">team1</span>
+        <span class="n">simPoints</span><span class="p">[</span><span class="n">winner</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">2</span>
+        <span class="n">winners</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">winner</span><span class="p">)</span>
+        <span class="n">outcomes</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"match"</span><span class="p">:</span> <span class="n">matches</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="s2">"winner"</span><span class="p">:</span> <span class="n">winner</span><span class="p">,</span> <span class="s2">"loser"</span><span class="p">:</span> <span class="n">loser</span><span class="p">})</span>
+    <span class="n">standings</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">simPoints</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">kv</span><span class="p">:</span> <span class="o">-</span><span class="n">kv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">"index"</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span> <span class="s2">"winners"</span><span class="p">:</span> <span class="n">winners</span><span class="p">,</span> <span class="s2">"outcomes"</span><span class="p">:</span> <span class="n">outcomes</span><span class="p">,</span>
+            <span class="s2">"points"</span><span class="p">:</span> <span class="n">simPoints</span><span class="p">,</span> <span class="s2">"standings"</span><span class="p">:</span> <span class="n">standings</span><span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">view_scenarios</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="n">team</span><span class="p">,</span> <span class="n">metric</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">show_winners</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""</span>
+<span class="sd">    Return a pandas DataFrame summarising the qualifying scenarios for</span>
+<span class="sd">    (team, metric). Each row is one scenario.</span>
+
+<span class="sd">    The `limit` parameter controls how many scenarios are returned:</span>
+<span class="sd">      - limit = N (a positive integer) : return the first N scenarios.</span>
+<span class="sd">      - limit = None                   : return ALL qualifying scenarios.</span>
+<span class="sd">                                         Useful when you want to export</span>
+<span class="sd">                                         or analyse the full set.</span>
+<span class="sd">      - limit = 0                      : return an empty DataFrame</span>
+<span class="sd">                                         (just the schema).</span>
+
+<span class="sd">    Note on performance: for popular metrics like SRH's top4_good_nrr,</span>
+<span class="sd">    `limit=None` may need to decode hundreds of thousands of scenarios.</span>
+<span class="sd">    Each decode is fast (~20 string ops), so a few hundred thousand rows</span>
+<span class="sd">    take a few seconds and a few hundred MB of RAM. If you hit memory</span>
+<span class="sd">    pressure, write directly to disk in chunks instead of building one</span>
+<span class="sd">    huge DataFrame in memory.</span>
+
+<span class="sd">    Columns:</span>
+<span class="sd">      - 'i'                 : the scenario index</span>
+<span class="sd">      - '{team}_credit'     : 1.0 for confirmed metrics, possibly</span>
+<span class="sd">                              fractional (e.g. 0.25) for good_nrr</span>
+<span class="sd">      - '{team}_rank_min'   : best-case finishing rank in this scenario</span>
+<span class="sd">      - '{team}_rank_max'   : worst-case finishing rank</span>
+<span class="sd">      - one column per team : final simulated points</span>
+<span class="sd">      - 'winners'           : (if show_winners) list of winners aligned</span>
+<span class="sd">                              with results['matches'], so element k is</span>
+<span class="sd">                              the winner of the k-th remaining match.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">      (DataFrame, total_count) where total_count is the FULL number of</span>
+<span class="sd">      qualifying scenarios — not the row count of the returned frame.</span>
+<span class="sd">      That way, even if you ask for limit=10, you can see how many there</span>
+<span class="sd">      are in total.</span>
+<span class="sd">    """</span>
+    <span class="n">indices</span>    <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">"scenarios"</span><span class="p">][</span><span class="n">metric</span><span class="p">][</span><span class="n">team</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span>
+    <span class="n">matches</span>    <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">]</span>
+    <span class="n">basePoints</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">"basePoints"</span><span class="p">]</span>
+    <span class="n">cutoff</span>     <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">"top_n"</span><span class="p">]</span> <span class="k">if</span> <span class="n">metric</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"top4"</span><span class="p">)</span> <span class="k">else</span> <span class="mi">2</span>
+
+    <span class="c1"># Decide how many scenarios to actually decode.</span>
+    <span class="c1"># Python's slicing semantics let us treat None and a positive int</span>
+    <span class="c1"># uniformly: indices[:None] is the full list, indices[:5] is the</span>
+    <span class="c1"># first 5. So we can just pass `limit` directly into the slice.</span>
+    <span class="c1"># The only special case worth handling is the user passing 0,</span>
+    <span class="c1"># which Python would handle correctly anyway but we make explicit</span>
+    <span class="c1"># for clarity below.</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="n">indices</span><span class="p">[:</span><span class="n">limit</span><span class="p">]</span> <span class="k">if</span> <span class="n">limit</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">[]</span>
+
+    <span class="c1"># Friendly heads-up when the export is large, so the user doesn't</span>
+    <span class="c1"># think the cell is hung. We only print once per call so it stays</span>
+    <span class="c1"># quiet for normal use.</span>
+    <span class="k">if</span> <span class="n">limit</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">100_000</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Decoding all </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> scenarios for "</span>
+              <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">team</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2"> / </span><span class="si">{</span><span class="n">metric</span><span class="si">}</span><span class="s2">; this may take a few seconds."</span><span class="p">)</span>
+
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">selected</span><span class="p">:</span>
+        <span class="n">d</span>      <span class="o">=</span> <span class="n">decode_scenario</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">basePoints</span><span class="p">,</span> <span class="n">matches</span><span class="p">)</span>
+        <span class="n">my_pts</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">"points"</span><span class="p">][</span><span class="n">team</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
+        <span class="n">ahead</span>  <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="s2">"points"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">team</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">and</span> <span class="n">p</span> <span class="o">&gt;</span> <span class="n">my_pts</span><span class="p">)</span>
+        <span class="n">tied</span>   <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="s2">"points"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">team</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">and</span> <span class="n">p</span> <span class="o">==</span> <span class="n">my_pts</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">"confirmed"</span> <span class="ow">in</span> <span class="n">metric</span><span class="p">:</span>
+            <span class="n">credit</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">credit</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="p">(</span><span class="n">cutoff</span> <span class="o">-</span> <span class="n">ahead</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">tied</span><span class="p">))</span> <span class="k">if</span> <span class="n">ahead</span> <span class="o">&lt;</span> <span class="n">cutoff</span> <span class="k">else</span> <span class="mf">0.0</span>
+
+        <span class="n">row</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"i"</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span>
+               <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">team</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_credit"</span>  <span class="p">:</span> <span class="n">credit</span><span class="p">,</span>
+               <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">team</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_rank_min"</span><span class="p">:</span> <span class="n">ahead</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span>
+               <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">team</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">}</span><span class="s2">_rank_max"</span><span class="p">:</span> <span class="n">ahead</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">tied</span><span class="p">}</span>
+        <span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">"points"</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="n">row</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="n">p</span>
+        <span class="k">if</span> <span class="n">show_winners</span><span class="p">:</span>
+            <span class="n">row</span><span class="p">[</span><span class="s2">"winners"</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="s2">"winners"</span><span class="p">]</span>
+        <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b6b3affb">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=957cfb57">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [30]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="n">basePoints</span> <span class="o">=</span> <span class="p">{</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># ---------- run and verify ----------</span>
+<span class="n">basePoints</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"srh"</span><span class="p">:</span> <span class="mi">14</span><span class="p">,</span> 
     <span class="s2">"pbks"</span><span class="p">:</span> <span class="mi">13</span><span class="p">,</span> 
     <span class="s2">"rcb"</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> 
-    <span class="s2">"srh"</span><span class="p">:</span> <span class="mi">14</span><span class="p">,</span> 
     <span class="s2">"rr"</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span> 
     <span class="s2">"gt"</span><span class="p">:</span> <span class="mi">12</span><span class="p">,</span>
     <span class="s2">"csk"</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> 
-    <span class="s2">"dc"</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>  
-    <span class="s2">"kkr"</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>  
-    <span class="s2">"mi"</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>  
+    <span class="s2">"kkr"</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span> 
+    <span class="s2">"dc"</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span> 
+    <span class="s2">"mi"</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> 
     <span class="s2">"lsg"</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>
 <span class="p">}</span>
-
 <span class="n">matches</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="s2">"dc:kkr"</span><span class="p">,</span> 
     <span class="s2">"rr:gt"</span><span class="p">,</span> 
     <span class="s2">"csk:lsg"</span><span class="p">,</span> 
     <span class="s2">"rcb:mi"</span><span class="p">,</span> 
@@ -7704,10 +7810,9 @@ a.anchor-link {
     <span class="s2">"srh:rcb"</span><span class="p">,</span> 
     <span class="s2">"lsg:pbks"</span><span class="p">,</span> 
     <span class="s2">"mi:rr"</span><span class="p">,</span> 
-    <span class="s2">"kkr:dc"</span>
+    <span class="s2">"kkr:dc"</span><span class="p">,</span>
 <span class="p">]</span>
-
-<span class="n">results</span> <span class="o">=</span> <span class="n">run_ipl_simulation</span><span class="p">(</span><span class="n">basePoints</span><span class="p">,</span> <span class="n">matches</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">run_ipl_simulation</span><span class="p">(</span><span class="n">basePoints</span><span class="p">,</span> <span class="n">matches</span><span class="p">,</span> <span class="n">top_n</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -7720,56 +7825,26 @@ a.anchor-link {
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Simulating from current standings (next game: dc:kkr)
+<pre>Pending matches    : 19
+Possible scenarios : 524,288
 
-Pending matches    : 20
-Possible scenarios : 1,048,576
-
-  500,000 / 1,048,576 (47.7%) | elapsed 0:00:15 | eta 0:00:16
-  1,000,000 / 1,048,576 (95.4%) | elapsed 0:00:28 | eta 0:00:01
-======================================================================================
-  RESULTS: before dc:kkr
-======================================================================================
- Team |  T2 Conf |   T2 NRR |  T4 Conf |   T4 NRR
---------------------------------------------------------------------------------------
- PBKS |   49.59% |   49.93% |   79.40% |   80.32%
-  SRH |   38.20% |   48.39% |   71.08% |   81.47%
-   GT |   22.77% |   31.12% |   52.55% |   63.98%
-  RCB |   22.39% |   31.07% |   52.45% |   64.58%
-   RR |   20.60% |   29.57% |   52.67% |   64.87%
-  CSK |    3.93% |    7.68% |   17.87% |   28.20%
-  KKR |    1.09% |    1.44% |    7.54% |    8.46%
-   DC |    0.05% |    0.80% |    3.02% |    6.75%
-  LSG |    0.00% |    0.00% |    0.02% |    0.68%
-   MI |    0.00% |    0.00% |    0.01% |    0.67%
-======================================================================================
-Completed 1,048,576 scenarios in 0:00:30
+  500,000 / 524,288 (95.4%) | elapsed 0:00:12
+Completed 524,288 scenarios in 0:00:12
 
 </pre>
 </div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=5328e5db">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=061f4910">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [31]:</div>
+<div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
-<span class="n">pd</span><span class="o">.</span><span class="n">set_option</span><span class="p">(</span><span class="s2">"display.float_format"</span><span class="p">,</span> <span class="s2">"</span><span class="si">{:.4f}</span><span class="s2">"</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>
-<span class="n">display_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">])[[</span><span class="s1">'team'</span><span class="p">,</span> <span class="s1">'top2_confirmed_pct'</span><span class="p">,</span> <span class="s1">'top2_good_nrr_pct'</span><span class="p">,</span> <span class="s1">'top4_confirmed_pct'</span><span class="p">,</span> <span class="s1">'top4_good_nrr_pct'</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<span class="n">display_df</span> <span class="o">=</span> <span class="n">display_df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span>
-    <span class="s1">'team'</span><span class="p">:</span> <span class="s1">'Team'</span><span class="p">,</span>
-    <span class="s1">'top2_confirmed_pct'</span><span class="p">:</span> <span class="s1">'Top2 Pts Only'</span><span class="p">,</span>
-    <span class="s1">'top2_good_nrr_pct'</span><span class="p">:</span> <span class="s1">'Top2 Pts + Good NRR'</span><span class="p">,</span>
-    <span class="s1">'top4_confirmed_pct'</span><span class="p">:</span> <span class="s1">'Top4 Pts Only'</span><span class="p">,</span>
-    <span class="s1">'top4_good_nrr_pct'</span><span class="p">:</span> <span class="s1">'Top4 Pts + Good NRR'</span><span class="p">,</span>
-<span class="p">})</span>
-<span class="n">display_df</span> <span class="o">=</span> <span class="n">display_df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">display_df</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s2">"summary"</span><span class="p">])</span>
 </pre></div>
 </div>
 </div>
@@ -7779,15 +7854,8 @@ Completed 1,048,576 scenarios in 0:00:30
 <div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
 </div>
 <div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>dict_keys(['summary', 'simulation_condition', 'total_scenarios', 'elapsed'])
-</pre>
-</div>
-</div>
 <div class="jp-OutputArea-child jp-OutputArea-executeResult">
-<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[31]:</div>
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[12]:</div>
 <div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
 <div>
 <style scoped="">
@@ -7807,97 +7875,498 @@ Completed 1,048,576 scenarios in 0:00:30
 <thead>
 <tr style="text-align: right;">
 <th></th>
-<th>Team</th>
-<th>Top2 Pts Only</th>
-<th>Top2 Pts + Good NRR</th>
-<th>Top4 Pts Only</th>
-<th>Top4 Pts + Good NRR</th>
+<th>team</th>
+<th>top2_confirmed_pct</th>
+<th>top2_good_nrr_pct</th>
+<th>top4_confirmed_pct</th>
+<th>top4_good_nrr_pct</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <th>0</th>
-<td>PBKS</td>
-<td>49.5858</td>
-<td>49.9318</td>
-<td>79.4001</td>
-<td>80.3217</td>
+<td>SRH</td>
+<td>38.255692</td>
+<td>48.310306</td>
+<td>71.573830</td>
+<td>81.510839</td>
 </tr>
 <tr>
 <th>1</th>
-<td>SRH</td>
-<td>38.1954</td>
-<td>48.3861</td>
-<td>71.0839</td>
-<td>81.4679</td>
+<td>PBKS</td>
+<td>48.959351</td>
+<td>49.630260</td>
+<td>79.024887</td>
+<td>80.497742</td>
 </tr>
 <tr>
 <th>2</th>
-<td>GT</td>
-<td>22.7684</td>
-<td>31.1152</td>
-<td>52.5466</td>
-<td>63.9815</td>
+<td>RR</td>
+<td>20.618820</td>
+<td>29.478714</td>
+<td>53.246498</td>
+<td>64.940239</td>
 </tr>
 <tr>
 <th>3</th>
 <td>RCB</td>
-<td>22.3911</td>
-<td>31.0749</td>
-<td>52.4495</td>
-<td>64.5846</td>
+<td>22.456741</td>
+<td>31.027471</td>
+<td>52.947617</td>
+<td>64.381063</td>
 </tr>
 <tr>
 <th>4</th>
-<td>RR</td>
-<td>20.5961</td>
-<td>29.5702</td>
-<td>52.6691</td>
-<td>64.8746</td>
+<td>GT</td>
+<td>22.832489</td>
+<td>31.059556</td>
+<td>53.024292</td>
+<td>63.803443</td>
 </tr>
 <tr>
 <th>5</th>
 <td>CSK</td>
-<td>3.9303</td>
-<td>7.6837</td>
-<td>17.8739</td>
-<td>28.1974</td>
+<td>3.949356</td>
+<td>7.640360</td>
+<td>18.216896</td>
+<td>28.071282</td>
 </tr>
 <tr>
 <th>6</th>
 <td>KKR</td>
-<td>1.0932</td>
-<td>1.4392</td>
-<td>7.5426</td>
-<td>8.4642</td>
+<td>2.178574</td>
+<td>2.849483</td>
+<td>12.881660</td>
+<td>14.354515</td>
 </tr>
 <tr>
 <th>7</th>
 <td>DC</td>
-<td>0.0519</td>
-<td>0.7965</td>
-<td>3.0178</td>
-<td>6.7544</td>
+<td>0.000000</td>
+<td>0.001491</td>
+<td>0.031471</td>
+<td>1.080798</td>
 </tr>
 <tr>
 <th>8</th>
-<td>LSG</td>
-<td>0.0000</td>
-<td>0.0010</td>
-<td>0.0188</td>
-<td>0.6806</td>
+<td>MI</td>
+<td>0.000000</td>
+<td>0.001395</td>
+<td>0.018501</td>
+<td>0.699990</td>
 </tr>
 <tr>
 <th>9</th>
-<td>MI</td>
-<td>0.0000</td>
-<td>0.0014</td>
-<td>0.0134</td>
-<td>0.6731</td>
+<td>LSG</td>
+<td>0.000000</td>
+<td>0.000963</td>
+<td>0.026131</td>
+<td>0.660089</td>
 </tr>
 </tbody>
 </table>
 </div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=604d4cbb">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [13]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># top2_good_nrr, top2_confirmed, top4_good_nrr, top4_confirmed</span>
+<span class="n">df</span><span class="p">,</span> <span class="n">total</span> <span class="o">=</span> <span class="n">view_scenarios</span><span class="p">(</span><span class="n">results</span><span class="p">,</span> <span class="s2">"MI"</span><span class="p">,</span> <span class="s2">"top4_confirmed"</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="n">total</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>(97, 15)
+</pre>
+</div>
+</div>
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[13]:</div>
+<div class="jp-RenderedText jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/plain" tabindex="0">
+<pre>97</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=d84d1e6a">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [14]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">df</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child jp-OutputArea-executeResult">
+<div class="jp-OutputPrompt jp-OutputArea-prompt">Out[14]:</div>
+<div class="jp-RenderedHTMLCommon jp-RenderedHTML jp-OutputArea-output jp-OutputArea-executeResult" data-mime-type="text/html" tabindex="0">
+<div>
+<style scoped="">
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+<thead>
+<tr style="text-align: right;">
+<th></th>
+<th>i</th>
+<th>MI_credit</th>
+<th>MI_rank_min</th>
+<th>MI_rank_max</th>
+<th>CSK</th>
+<th>DC</th>
+<th>GT</th>
+<th>KKR</th>
+<th>LSG</th>
+<th>MI</th>
+<th>PBKS</th>
+<th>RCB</th>
+<th>RR</th>
+<th>SRH</th>
+<th>winners</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<th>0</th>
+<td>225457</td>
+<td>1.0</td>
+<td>4</td>
+<td>4</td>
+<td>12</td>
+<td>12</td>
+<td>12</td>
+<td>13</td>
+<td>12</td>
+<td>14</td>
+<td>17</td>
+<td>12</td>
+<td>16</td>
+<td>20</td>
+<td>[rr, lsg, mi, pbks, srh, kkr, mi, lsg, kkr, pb...</td>
+</tr>
+<tr>
+<th>1</th>
+<td>225461</td>
+<td>1.0</td>
+<td>4</td>
+<td>4</td>
+<td>12</td>
+<td>12</td>
+<td>12</td>
+<td>13</td>
+<td>10</td>
+<td>14</td>
+<td>19</td>
+<td>12</td>
+<td>16</td>
+<td>20</td>
+<td>[rr, lsg, mi, pbks, srh, kkr, mi, lsg, kkr, pb...</td>
+</tr>
+<tr>
+<th>2</th>
+<td>225525</td>
+<td>1.0</td>
+<td>3</td>
+<td>4</td>
+<td>12</td>
+<td>12</td>
+<td>12</td>
+<td>13</td>
+<td>12</td>
+<td>14</td>
+<td>19</td>
+<td>12</td>
+<td>14</td>
+<td>20</td>
+<td>[rr, lsg, mi, pbks, srh, kkr, mi, lsg, kkr, pb...</td>
+</tr>
+<tr>
+<th>3</th>
+<td>225713</td>
+<td>1.0</td>
+<td>4</td>
+<td>4</td>
+<td>12</td>
+<td>10</td>
+<td>12</td>
+<td>13</td>
+<td>12</td>
+<td>14</td>
+<td>17</td>
+<td>12</td>
+<td>18</td>
+<td>20</td>
+<td>[rr, lsg, mi, pbks, srh, kkr, mi, lsg, kkr, pb...</td>
+</tr>
+<tr>
+<th>4</th>
+<td>225717</td>
+<td>1.0</td>
+<td>4</td>
+<td>4</td>
+<td>12</td>
+<td>10</td>
+<td>12</td>
+<td>13</td>
+<td>10</td>
+<td>14</td>
+<td>19</td>
+<td>12</td>
+<td>18</td>
+<td>20</td>
+<td>[rr, lsg, mi, pbks, srh, kkr, mi, lsg, kkr, pb...</td>
+</tr>
+<tr>
+<th>...</th>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr>
+<th>92</th>
+<td>521460</td>
+<td>1.0</td>
+<td>4</td>
+<td>4</td>
+<td>12</td>
+<td>12</td>
+<td>16</td>
+<td>13</td>
+<td>12</td>
+<td>14</td>
+<td>17</td>
+<td>12</td>
+<td>12</td>
+<td>20</td>
+<td>[gt, lsg, mi, dc, srh, kkr, mi, lsg, gt, pbks,...</td>
+</tr>
+<tr>
+<th>93</th>
+<td>523488</td>
+<td>1.0</td>
+<td>4</td>
+<td>4</td>
+<td>12</td>
+<td>12</td>
+<td>18</td>
+<td>13</td>
+<td>12</td>
+<td>14</td>
+<td>15</td>
+<td>12</td>
+<td>12</td>
+<td>20</td>
+<td>[gt, lsg, mi, dc, srh, kkr, mi, csk, gt, pbks,...</td>
+</tr>
+<tr>
+<th>94</th>
+<td>523492</td>
+<td>1.0</td>
+<td>4</td>
+<td>4</td>
+<td>12</td>
+<td>12</td>
+<td>18</td>
+<td>13</td>
+<td>10</td>
+<td>14</td>
+<td>17</td>
+<td>12</td>
+<td>12</td>
+<td>20</td>
+<td>[gt, lsg, mi, dc, srh, kkr, mi, csk, gt, pbks,...</td>
+</tr>
+<tr>
+<th>95</th>
+<td>524000</td>
+<td>1.0</td>
+<td>3</td>
+<td>4</td>
+<td>12</td>
+<td>12</td>
+<td>18</td>
+<td>13</td>
+<td>12</td>
+<td>14</td>
+<td>13</td>
+<td>14</td>
+<td>12</td>
+<td>20</td>
+<td>[gt, lsg, mi, dc, srh, kkr, mi, csk, gt, rcb, ...</td>
+</tr>
+<tr>
+<th>96</th>
+<td>524008</td>
+<td>1.0</td>
+<td>4</td>
+<td>4</td>
+<td>12</td>
+<td>12</td>
+<td>18</td>
+<td>13</td>
+<td>12</td>
+<td>14</td>
+<td>13</td>
+<td>16</td>
+<td>12</td>
+<td>18</td>
+<td>[gt, lsg, mi, dc, srh, kkr, mi, csk, gt, rcb, ...</td>
+</tr>
+</tbody>
+</table>
+<p>97 rows × 15 columns</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e3ec0bdc">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [15]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="n">mi_conf</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">"scenarios"</span><span class="p">][</span><span class="s2">"top4_confirmed"</span><span class="p">][</span><span class="s2">"MI"</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"List of scenario indices for MI's top4_confirmed:</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">mi_conf</span><span class="p">)</span>
+
+<span class="n">random_choice</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">mi_conf</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Decoding a random scenario for MI's top4_confirmed:</span><span class="se">\n</span><span class="s2">"</span><span class="p">,</span> <span class="n">random_choice</span><span class="p">)</span>
+<span class="n">d</span> <span class="o">=</span> <span class="n">decode_scenario</span><span class="p">(</span><span class="n">random_choice</span><span class="p">,</span> <span class="n">basePoints</span><span class="p">,</span> <span class="n">matches</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>List of scenario indices for MI's top4_confirmed:
+ [225457, 225461, 225525, 225713, 225717, 225781, 250544, 250552, 250800, 250801, 250808, 250809, 258481, 258485, 258549, 258993, 259001, 340193, 340197, 341216, 341217, 341220, 341221, 356577, 356581, 357600, 357601, 357604, 357605, 365280, 365288, 366304, 366312, 373984, 373988, 374496, 374504, 381664, 381672, 382688, 382696, 390368, 390372, 390880, 390888, 471141, 471269, 471285, 472164, 472165, 472292, 472293, 472308, 472309, 473313, 473317, 474336, 474337, 474340, 474341, 487525, 487653, 487669, 488548, 488549, 488676, 488677, 488692, 488693, 489697, 489701, 490720, 490721, 490724, 490725, 498400, 498408, 499424, 499432, 504932, 505060, 505076, 507104, 507108, 507616, 507624, 514784, 514792, 515808, 515816, 521316, 521444, 521460, 523488, 523492, 524000, 524008]
+
+Decoding a random scenario for MI's top4_confirmed:
+ 487669
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=826ec0fb">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [16]:</div>
+<div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="cm-editor cm-s-jupyter">
+<div class="highlight hl-ipython3"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Paired with the matches:"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">match</span><span class="p">,</span> <span class="n">matchwinner</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">matches</span><span class="p">,</span> <span class="n">d</span><span class="p">[</span><span class="s2">"winners"</span><span class="p">]):</span>
+    <span class="n">loser</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">match</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">":"</span><span class="p">)</span> <span class="k">if</span> <span class="n">t</span> <span class="o">!=</span> <span class="n">matchwinner</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">match</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">:</span><span class="s2">&gt;10</span><span class="si">}</span><span class="s2">  -&gt;  </span><span class="si">{</span><span class="n">matchwinner</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2">  beats  </span><span class="si">{</span><span class="n">loser</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="se">\n</span><span class="s2">Final standings:"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">t</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">d</span><span class="p">[</span><span class="s2">"standings"</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"  </span><span class="si">{</span><span class="n">t</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span><span class="si">:</span><span class="s2">&gt;4</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>
+Paired with the matches:
+       RR:GT  -&gt;    GT  beats    RR
+     CSK:LSG  -&gt;   LSG  beats   CSK
+      RCB:MI  -&gt;    MI  beats   RCB
+     PBKS:DC  -&gt;  PBKS  beats    DC
+      GT:SRH  -&gt;   SRH  beats    GT
+     RCB:KKR  -&gt;   KKR  beats   RCB
+     PBKS:MI  -&gt;    MI  beats  PBKS
+     LSG:CSK  -&gt;   LSG  beats   CSK
+      KKR:GT  -&gt;   KKR  beats    GT
+    PBKS:RCB  -&gt;  PBKS  beats   RCB
+       DC:RR  -&gt;    DC  beats    RR
+     CSK:SRH  -&gt;   SRH  beats   CSK
+      RR:LSG  -&gt;   LSG  beats    RR
+      KKR:MI  -&gt;    MI  beats   KKR
+      GT:CSK  -&gt;   CSK  beats    GT
+     SRH:RCB  -&gt;   SRH  beats   RCB
+    LSG:PBKS  -&gt;  PBKS  beats   LSG
+       MI:RR  -&gt;    MI  beats    RR
+      KKR:DC  -&gt;    DC  beats   KKR
+
+Final standings:
+   SRH: 20
+  PBKS: 19
+    GT: 14
+    MI: 14
+   KKR: 13
+   RCB: 12
+    RR: 12
+   CSK: 12
+    DC: 12
+   LSG: 12
+</pre>
 </div>
 </div>
 </div>

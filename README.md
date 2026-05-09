@@ -8,7 +8,13 @@ This repository recreates [`u/amerind386`](https://old.reddit.com/user/amerind38
 Logic of the NRR based calculation updated in `ipl_probs_v2.ipynb` to replicate the current calculations of u/amerind386. Adding images to show them here.
 
 Image of the current logic script's output
-![alt text](script.png)
+![Replicated scripts output](script.png)
 
 [Image from u/amerind386's post today](https://old.reddit.com/r/Cricket/comments/1t6jzh8/playoff_probabilities_impact_of_dc_vs_kkr_game/)
-![alt text](amerind386_post.png)
+![Original scripts output](amerind386_post.png)
+
+## Update: 20260509 - Added mechanism for scenario lookup
+
+Now, the logic can retrieve specific scenarios where a particular team reaches a certain outcome. Added example for MI reaching a top 4 confirmed scenario
+
+![Example top 4 scenario for MI](mi_top4_scenario.png)
