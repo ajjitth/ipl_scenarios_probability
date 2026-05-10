@@ -243,7 +243,7 @@ basePoints = {
     "srh": 14, 
     "gt": 14,
     "pbks": 13, 
-    "rcb": 12, 
+    "rcb": 14, 
     "rr": 12, 
     "csk": 12, 
     "kkr": 9, 
@@ -252,7 +252,6 @@ basePoints = {
     "lsg": 6,
 }
 matches = [
-    "rcb:mi", 
     "pbks:dc",
     "gt:srh", 
     "rcb:kkr", 
@@ -277,7 +276,7 @@ pd.DataFrame(results["summary"])
 
 # %%
 # top2_good_nrr, top2_confirmed, top4_good_nrr, top4_confirmed
-df, total = view_scenarios(results, "MI", "top4_confirmed", limit=None)
+df, total = view_scenarios(results, "DC", "top4_confirmed", limit=None)
 print(df.shape)
 total
 
@@ -285,11 +284,11 @@ total
 df
 
 # %%
-mi_conf = results["scenarios"]["top4_confirmed"]["MI"]
-print("List of scenario indices for MI's top4_confirmed:\n", mi_conf)
+dc_conf = results["scenarios"]["top4_confirmed"]["DC"]
+print("List of scenario indices for DC's top4_confirmed:\n", dc_conf)
 
-random_choice = random.choice(mi_conf)
-print("\nDecoding a random scenario for MI's top4_confirmed:\n", random_choice)
+random_choice = random.choice(dc_conf)
+print("\nDecoding a random scenario for DC's top4_confirmed:\n", random_choice)
 d = decode_scenario(random_choice, basePoints, matches)
 
 # %%
