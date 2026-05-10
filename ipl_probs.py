@@ -245,14 +245,13 @@ basePoints = {
     "pbks": 13, 
     "rcb": 12, 
     "rr": 12, 
-    "csk": 10, 
+    "csk": 12, 
     "kkr": 9, 
     "dc": 8, 
     "mi": 6, 
     "lsg": 6,
 }
 matches = [
-    "csk:lsg", 
     "rcb:mi", 
     "pbks:dc",
     "gt:srh", 
