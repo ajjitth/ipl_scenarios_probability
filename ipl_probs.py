@@ -97,7 +97,7 @@ def run_ipl_simulation(basePoints_master, matches_master,
             "top4_confirmed_pct" : round(confirmed[team]  * 100.0 / combos, 6),
             "top4_good_nrr_pct"  : round(good_nrr[team]   * 100.0 / combos, 6),
         })
-    summary.sort(key=lambda x: -x["top4_good_nrr_pct"])
+    summary.sort(key=lambda x: -x["top2_good_nrr_pct"])
 
     out = {
         "summary"         : summary,
@@ -241,10 +241,10 @@ def view_scenarios(results, team, metric, limit=10, show_winners=True):
 # ---------- run and verify ----------
 basePoints = {
     "srh": 14, 
+    "gt": 14,
     "pbks": 13, 
     "rcb": 12, 
     "rr": 12, 
-    "gt": 12,
     "csk": 10, 
     "kkr": 9, 
     "dc": 8, 
@@ -252,7 +252,6 @@ basePoints = {
     "lsg": 6,
 }
 matches = [
-    "rr:gt", 
     "csk:lsg", 
     "rcb:mi", 
     "pbks:dc",
