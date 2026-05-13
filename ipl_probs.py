@@ -240,21 +240,18 @@ def view_scenarios(results, team, metric, limit=10, show_winners=True):
 # %%
 # ---------- run and verify ----------
 basePoints = {
+    "gt": 16,
+    "rcb": 16, 
     "srh": 14, 
-    "gt": 14,
     "pbks": 13, 
-    "rcb": 14, 
     "rr": 12, 
     "csk": 12, 
+    "dc": 10, 
     "kkr": 9, 
-    "dc": 8, 
     "mi": 6, 
     "lsg": 6,
 }
 matches = [
-    "pbks:dc",
-    "gt:srh", 
-    "rcb:kkr", 
     "pbks:mi", 
     "lsg:csk", 
     "kkr:gt",
